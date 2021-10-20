@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <stdlib.h>
 #include "common.h"
 
 int main () {
@@ -38,8 +39,9 @@ int main () {
     read ( s, msg, msglen );
     printf("I received : %s\n", msg);
 */
+
+    printf("Welcome! Please login.\n");
     while (true) {
-        printf("Welcome! Please login.\n");
         read(0, consoleBuffer, BUFFER_LENGTH);
 
         strcpy(outBuffer, consoleBuffer);
@@ -49,8 +51,22 @@ int main () {
 
         if(streq(inBuffer, MESSAGE_LOGIN_OK)) {
           printf("Login successful!\n");
+          printf("Available commands:\nget-logged-users\t|\tget-proc-info : <pid>\t|\tlogout\t|\tquit \n");
           fflush(stdout);
-          break;
+        }
+        else if (streq(inBuffer, MESSAGE_LOGIN_NOK)){
+            printf("Login unsuccessful. Access denied\n");
+            fflush(stdout);
+            continue;
+        }
+        else if (streq(inBuffer, MESSAGE_LOGIN_ALREADY)){
+            printf("Already logged in.\n");
+            fflush(stdout);
+            continue;
+        }
+        else if (streq(inBuffer, MESSAGE_QUIT)){
+            printf("Quit\n");
+            exit(0);
         }
     }
     return 0;

@@ -7,6 +7,8 @@
 #define BUFFER_LENGTH 256
 #define MESSAGE_LOGIN_OK "loginOK"
 #define MESSAGE_LOGIN_NOK "loginNOK"
+#define MESSAGE_LOGIN_ALREADY "loginAlready"
+#define MESSAGE_QUIT "quit"
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
