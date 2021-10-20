@@ -43,14 +43,17 @@ int main () {
     printf("Welcome! Please login.\n");
     while (true) {
         read(0, consoleBuffer, BUFFER_LENGTH);
-
+        removeEnter(consoleBuffer);
         strcpy(outBuffer, consoleBuffer);
+
+        printf("~consoleBuffer>%s~\n", consoleBuffer);
         writeBuffer(s, outBuffer);
+
 
         readBuffer(s, inBuffer);
 
         if(streq(inBuffer, MESSAGE_LOGIN_OK)) {
-          printf("Login successful!\n");
+          printf("Login successful! ");
           printf("Available commands:\nget-logged-users\t|\tget-proc-info : <pid>\t|\tlogout\t|\tquit \n");
           fflush(stdout);
         }
@@ -68,6 +71,26 @@ int main () {
             printf("Quit\n");
             exit(0);
         }
+        else if (streq(inBuffer, MESSAGE_NOT_LOGGED_IN)){
+            printf("Please login first.\n");
+            continue;
+        }
+        else if (streq(inBuffer, MESSAGE_LOGOUT)){
+            printf("Logged out. You can login again\n");
+            fflush(stdout);
+            continue;
+        }
+        else if (streq(inBuffer, MESSAGE_LOGOUT_NOK)){
+            printf("Cannot log out\n");
+            fflush(stdout);
+            continue;
+        }
+        else if(streq(inBuffer, MESSAGE_UNKNOWN_COMMAND)){
+            printf("Unknown command\n");
+            fflush(stdout);
+            continue;
+        }
+
     }
     return 0;
 }
