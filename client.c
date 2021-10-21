@@ -44,10 +44,12 @@ int main () {
     while (true) {
         read(0, consoleBuffer, BUFFER_LENGTH);
         removeEnter(consoleBuffer);
-        strcpy(outBuffer, consoleBuffer);
+        if(*consoleBuffer != '\0')
+            strcpy(outBuffer, consoleBuffer);
+        else
+            continue;
 
         writeBuffer(s, outBuffer);
-
 
         readBuffer(s, inBuffer);
 
