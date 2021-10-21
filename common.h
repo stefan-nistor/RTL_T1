@@ -14,6 +14,8 @@
 #define MESSAGE_LOGOUT "logout"
 #define MESSAGE_LOGOUT_NOK "notLogout"
 #define MESSAGE_UNKNOWN_COMMAND "badCommand"
+#define MESSAGE_PID_BAD "badPid"
+#define MESSAGE_PID_OK "goodPid"
 #define FIFO "fifoComm"
 
 
@@ -25,6 +27,7 @@
 #include <utmp.h>
 #include <time.h>
 
+
 typedef enum {
     LOGGED_IN,
     LOGGED_OUT,
@@ -35,7 +38,15 @@ struct User{
     char pUsername[BUFFER_LENGTH];
     char pHostname[BUFFER_LENGTH];
     char pTime[BUFFER_LENGTH];
-} user;
+};
+
+struct PidInfo{
+    char pName[BUFFER_LENGTH];
+    char pState[BUFFER_LENGTH];
+    char pPpid[BUFFER_LENGTH];
+    char pUid[BUFFER_LENGTH];
+    char pVmsize[BUFFER_LENGTH];
+};
 
 static void getUserInfo(struct User  *user ){
     struct passwd * p = getpwuid(getuid());
@@ -52,13 +63,13 @@ static bool streq(const char * p1, const char * p2 ){
     return strcmp(p1, p2) == 0;
 }
 
-static void writeBuffer(int fd, const char* pBuf){
+static void writeBuffer(int fd,  void* pBuf){
     __auto_type bufLen = strlen(pBuf);
     write(fd, & bufLen, 4);
     write(fd, pBuf, bufLen);
 }
 
-static void readBuffer(int fd, char * pBuf){
+static void readBuffer(int fd, void * pBuf){
     memset(pBuf, 0, BUFFER_LENGTH);
     int bufLen;
     int retVal = read(fd, & bufLen, 4);
@@ -112,6 +123,29 @@ static char* acquireCommand (char *pBuf){
     //memset(p, 0, BUFFER_LENGTH);
     strcpy(p, pBuf);
     return strtok(p, " ");
+}
+
+static int acquirePidStatus (pid_t pid, struct PidInfo *p){
+    char pidStatusPath[BUFFER_LENGTH], entry[BUFFER_LENGTH];
+    sprintf(pidStatusPath, "/proc/%d/status", pid);
+
+    FILE * pidStatusFile = fopen(pidStatusPath, "r");
+
+    if(pidStatusFile == NULL) return -1;
+
+    while(! feof(pidStatusFile)){
+        fgets(entry, BUFFER_LENGTH, pidStatusFile);
+        removeEnter(entry);
+
+        if(strstr(entry, "Name") == entry)      strcpy(p->pName, entry), printf("~~%s\n", p->pName);
+        if(strstr(entry, "State") == entry)     strcpy(p->pState, entry), printf("~~%s\n", p->pState);
+        if(strstr(entry, "PPid") == entry)      strcpy(p->pPpid, entry), printf("~~%s\n", p->pPpid);
+        if(strstr(entry, "Uid") == entry)       strcpy(p->pUid, entry), printf("~~%s\n", p->pUid);
+        if(strstr(entry, "VmSize") == entry)    strcpy(p->pVmsize, entry), printf("~~%s\n", p->pVmsize);
+    }
+
+    fclose(pidStatusFile);
+    return 0;
 }
 
 #endif //RTL_T1_COMMON_H

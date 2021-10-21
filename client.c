@@ -58,7 +58,7 @@ int main () {
           fflush(stdout);
         }
         else if (streq(inBuffer, MESSAGE_LOGIN_NOK)){
-            printf("Login unsuccessful. Access denied\n");
+            printf("Access denied\n");
             fflush(stdout);
             continue;
         }
@@ -84,6 +84,33 @@ int main () {
             printf("Cannot log out\n");
             fflush(stdout);
             continue;
+        }
+        else if(streq(inBuffer, MESSAGE_PID_BAD)){
+            printf("Bad pid\n");
+            fflush(stdout);
+            continue;
+        }
+        else if(streq(inBuffer, MESSAGE_PID_OK)){
+            // Name
+            readBuffer(s, consoleBuffer);
+            printf("%s\n", consoleBuffer);
+            fflush(stdout);
+            // State
+            readBuffer(s, consoleBuffer);
+            printf("%s\n", consoleBuffer);
+            fflush(stdout);
+            // PPid
+            readBuffer(s, consoleBuffer);
+            printf("%s\n", consoleBuffer);
+            fflush(stdout);
+            // Uid
+            readBuffer(s, consoleBuffer);
+            printf("%s\n", consoleBuffer);
+            fflush(stdout);
+            // VmSize
+            readBuffer(s, consoleBuffer);
+            printf("%s\n", consoleBuffer);
+            fflush(stdout);
         }
         else if(streq(inBuffer, MESSAGE_UNKNOWN_COMMAND)){
             printf("Unknown command\n");

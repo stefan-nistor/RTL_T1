@@ -91,10 +91,11 @@ int main() {
                      close(sock[0]);
                      exit(0);
                  }else if (childPid > 0){
-                     close(sock[0]);
+                    close(sock[0]);
 
-                     writeBuffer(sock[1], param);
-                     fflush(stdout);
+                    writeBuffer(sock[1], param);
+                    readBuffer(sock[1], response);
+                    fflush(stdout);
 
                      if(streq(MESSAGE_LOGIN_OK, response)){
                          loginState = LOGGED_IN;
@@ -198,9 +199,6 @@ int main() {
                 writeBuffer(fd, command);
                 readBuffer(pi[0], response);
 
-                printf("~A%s~\n", response);
-                fflush(stdout);
-
                 if(streq(response, MESSAGE_LOGOUT)) {
                     writeBuffer(c, MESSAGE_LOGOUT);
                     loginState = LOGGED_OUT;
@@ -215,7 +213,6 @@ int main() {
                 else if(streq(response, MESSAGE_LOGOUT_NOK))
                     writeBuffer(c, MESSAGE_LOGOUT_NOK);
 
-
                 close (pi[0]);
                 close(fd);
                 waitpid( childPid, NULL, 0 );
@@ -225,44 +222,102 @@ int main() {
             }
         }
 
-//        else if(streq(command, "logout"))   // using fifo
-//        {
-//            if (-1 == mkfifo(FIFO, 0666)){
-//                fprintf(stderr, "Error at mkfifo\n");
-//                exit(1);
-//            }
-//
-//            pid_t childPid = fork();
-//            if(childPid == 0){
-//                if(-1 == open(FIFO, O_RDONLY)){
-//                    fprintf(stderr, "Failed to open read end of external pipe\n");
-//                    exit(1);
-//                }
-//
-//            }
-//
-//        }
 
         else if (streq(command, "get-logged-users")){
-            pid_t childPid = fork();
+            if(loginState == LOGGED_IN) {
+                pid_t childPid = fork();
 
-            if (childPid == 0){
-                close(sock[1]);
-                char childBuf[BUFFER_LENGTH];
-                readBuffer(sock[0], childBuf);
+                if (childPid == 0) {
+                    close(sock[1]);
+                    char childBuf[BUFFER_LENGTH];
+                    readBuffer(sock[0], childBuf);
 
-                if(loginState != LOGGED_IN){
-                    writeBuffer(sock[0], MESSAGE_NOT_LOGGED_IN);
-                }
-                else{
+                    if (loginState != LOGGED_IN) {
+                        writeBuffer(sock[0], MESSAGE_NOT_LOGGED_IN);
+                    } else {
 
+                    }
+                } else if (childPid > 0) {
+                    close(sock[0]);
+
+                    writeBuffer(sock[1], command);
+                    readBuffer(sock[1], response);
                 }
             }
-            else if (childPid > 0){
-                close(sock[0]);
+            else{
+                writeBuffer(c, MESSAGE_LOGIN_NOK);
+                continue;
+            }
+        }else if(strstr(p, "get-proc-info : ") == p){
+            int retVal = socketpair(AF_UNIX, SOCK_STREAM, 0, sock);
+            if(loginState == LOGGED_IN){
 
-                writeBuffer(sock[1], command);
-                readBuffer(sock[1], response);
+                pid_t childPid = fork();
+                struct PidInfo pidInfo;
+
+                strcpy(param, acquireParam(p));
+
+                if(childPid == 0){
+                    close(sock[1]);
+
+                    char childBuf[BUFFER_LENGTH];
+                    readBuffer(sock[0], childBuf);
+
+                    if (acquirePidStatus(strtol(childBuf, NULL, 10), &pidInfo) == 0){
+                        writeBuffer(sock[0], MESSAGE_PID_OK);
+                        writeBuffer(sock[0], pidInfo.pName);
+                        writeBuffer(sock[0], pidInfo.pState);
+                        writeBuffer(sock[0], pidInfo.pPpid);
+                        writeBuffer(sock[0], pidInfo.pUid);
+                        writeBuffer(sock[0], pidInfo.pVmsize);
+                    }
+                    else
+                        writeBuffer(sock[0],MESSAGE_PID_BAD);
+
+                    close(sock[0]);
+                    exit(0);
+                }
+                else if (childPid > 0){
+                    close(sock[0]);
+
+                    struct PidInfo pStr;
+
+                    writeBuffer(sock[1], param);
+
+                    readBuffer(sock[1], response);
+
+                    if(streq(response, MESSAGE_PID_OK)) {
+                        // MESSAGE_PID_OK
+                        writeBuffer(c, response);
+                        // Name
+                        readBuffer(sock[1], response);
+                        writeBuffer(c, response);
+                        // State
+                        readBuffer(sock[1], response);
+                        writeBuffer(c, response);
+                        // PPid
+                        readBuffer(sock[1], response);
+                        writeBuffer(c, response);
+                        // Uid
+                        readBuffer(sock[1], response);
+                        writeBuffer(c, response);
+                        // VmSize
+                        readBuffer(sock[1], response);
+                        writeBuffer(c, response);
+                    }
+
+                    printf("response:>%s\n", response);
+                    fflush(stdout);
+
+                    if(streq(response, MESSAGE_PID_BAD)){
+                        writeBuffer(c, MESSAGE_PID_BAD);
+                        continue;
+                    }
+
+
+                    close(sock[1]);
+                    waitpid(childPid, NULL, 0);
+                }
             }
 
         }
