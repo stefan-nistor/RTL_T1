@@ -14,9 +14,10 @@
 int main() {
 
     int sock[2];
-
+    char response[BUFFER_LENGTH];
     char inBuffer[BUFFER_LENGTH], outBuffer[BUFFER_LENGTH], consoleBuffer[BUFFER_LENGTH];
     char command[BUFFER_LENGTH], param[BUFFER_LENGTH];
+
     LoginState loginState = LOGGED_OUT;
 
     int s = socket(
@@ -57,23 +58,16 @@ int main() {
             & len
     );
 
-    char msg[256], response[512];
-    int msglen;
-
     while (true){
         readBuffer(c, inBuffer);
         removeEnter(inBuffer);
-        printf("#buf :%s\n", inBuffer);
-        fflush(stdout);
+
         char p[256];
         strcpy(p, inBuffer);
         strcpy(command, acquireCommand(p));
 
-        printf("#command :%s\n", command);
-        fflush(stdout);
-
-        if(strstr(p, "login : ") == p) // using socketpair
-        {
+        // using socketpair
+        if(strstr(p, "login : ") == p){
             int retVal = socketpair(AF_UNIX, SOCK_STREAM, 0, sock);
 
             if(loginState == LOGGED_OUT || loginState == LOGIN_FAILED){
@@ -116,8 +110,8 @@ int main() {
                  continue;
              }
          }
-        else if (streq(command, "quit"))    // using pipes
-        {
+        // using pipes
+        else if (streq(command, "quit")){
             int fd1[2], fd2[2];
 
             if(pipe(fd1) == -1){
@@ -160,7 +154,7 @@ int main() {
                 exit(1);
             }
         }
-
+        // using fifo
         else if ( streq ( command, "logout" ) ) {
             if ( -1 == mkfifo ( FIFO, 0666 ) ) {
                 unlink ( FIFO );
@@ -181,11 +175,10 @@ int main() {
                 char childBuf[BUFFER_LENGTH];
                 readBuffer(fd, childBuf);
 
-
                 printf("~%s~\n", childBuf);
                 fflush(stdout);
 
-                loginState == LOGGED_IN ? writeBuffer(pi[1], MESSAGE_LOGOUT) : writeBuffer(pi[1], MESSAGE_LOGOUT_NOK);
+                loginState == LOGGED_IN ? writeBuffer(pi[1], MESSAGE_LOGOUT) : writeBuffer(pi[1], MESSAGE_LOGIN_NOK);
 
                 close(pi[1]);
                 close(fd);
@@ -210,8 +203,8 @@ int main() {
                     continue;
                 }
 
-                else if(streq(response, MESSAGE_LOGOUT_NOK))
-                    writeBuffer(c, MESSAGE_LOGOUT_NOK);
+                else if(streq(response, MESSAGE_LOGIN_NOK))
+                    writeBuffer(c, MESSAGE_LOGIN_NOK);
 
                 close (pi[0]);
                 close(fd);
@@ -222,33 +215,67 @@ int main() {
             }
         }
 
-
         else if (streq(command, "get-logged-users")){
+            int retVal = socketpair(AF_UNIX, SOCK_STREAM, 0, sock);
             if(loginState == LOGGED_IN) {
                 pid_t childPid = fork();
+                struct User user;
 
                 if (childPid == 0) {
                     close(sock[1]);
+
                     char childBuf[BUFFER_LENGTH];
                     readBuffer(sock[0], childBuf);
 
-                    if (loginState != LOGGED_IN) {
-                        writeBuffer(sock[0], MESSAGE_NOT_LOGGED_IN);
-                    } else {
+                    getUserInfo(&user);
 
+                    if(&user != NULL) {
+                        writeBuffer(sock[0], MESSAGE_USER_OK);
+
+                        writeBuffer(sock[0], user.pUsername);
+
+                        writeBuffer(sock[0], user.pHostname);
+
+                        writeBuffer(sock[0], user.pTime);
                     }
+                    close(sock[0]);
+                    exit(0);
                 } else if (childPid > 0) {
                     close(sock[0]);
 
                     writeBuffer(sock[1], command);
+
                     readBuffer(sock[1], response);
+
+                    if(streq(response, MESSAGE_USER_OK)){
+                        //MESSAGE_USER_OK
+                        writeBuffer(c, response);
+                        //Name
+                        readBuffer(sock[1], response);
+                        writeBuffer(c, response);
+                        //Hostname
+                        readBuffer(sock[1], response);
+                        writeBuffer(c, response);
+                        //Time
+                        readBuffer(sock[1], response);
+                        writeBuffer(c, response);
+                    }
+
+                    close(sock[1]);
+                    waitpid(childPid, NULL, 0);
+                }
+                else{
+                    fprintf(stderr, "Fork error\n");
+                    exit(1);
                 }
             }
             else{
                 writeBuffer(c, MESSAGE_LOGIN_NOK);
                 continue;
             }
-        }else if(strstr(p, "get-proc-info : ") == p){
+        }
+
+        else if(strstr(p, "get-proc-info : ") == p){
             int retVal = socketpair(AF_UNIX, SOCK_STREAM, 0, sock);
             if(loginState == LOGGED_IN){
 
@@ -280,7 +307,6 @@ int main() {
                 else if (childPid > 0){
                     close(sock[0]);
 
-                    struct PidInfo pStr;
 
                     writeBuffer(sock[1], param);
 
@@ -306,24 +332,26 @@ int main() {
                         writeBuffer(c, response);
                     }
 
-                    printf("response:>%s\n", response);
-                    fflush(stdout);
-
                     if(streq(response, MESSAGE_PID_BAD)){
                         writeBuffer(c, MESSAGE_PID_BAD);
                         continue;
                     }
 
-
                     close(sock[1]);
                     waitpid(childPid, NULL, 0);
                 }
             }
-
+            else{
+                writeBuffer(c, MESSAGE_LOGIN_NOK);
+                continue;
+            }
         }
-        else{
+        else if(loginState == LOGGED_IN){
             writeBuffer(c, MESSAGE_UNKNOWN_COMMAND);
             continue;
+        }
+        else{
+            writeBuffer(c, MESSAGE_LOGIN_NOK);
         }
      }
 

@@ -10,12 +10,11 @@
 #define MESSAGE_LOGIN_NOK "loginNOK"
 #define MESSAGE_LOGIN_ALREADY "loginAlready"
 #define MESSAGE_QUIT "quit"
-#define MESSAGE_NOT_LOGGED_IN "notLogin"
 #define MESSAGE_LOGOUT "logout"
-#define MESSAGE_LOGOUT_NOK "notLogout"
 #define MESSAGE_UNKNOWN_COMMAND "badCommand"
 #define MESSAGE_PID_BAD "badPid"
 #define MESSAGE_PID_OK "goodPid"
+#define MESSAGE_USER_OK "userOk"
 #define FIFO "fifoComm"
 
 
@@ -49,14 +48,20 @@ struct PidInfo{
 };
 
 static void getUserInfo(struct User  *user ){
-    struct passwd * p = getpwuid(getuid());
-    strcpy(user->pUsername, p->pw_name);
+    struct utmp *entry;
+    time_t timestamp;
+    utmpname("/var/log/wtmp");
+    setutent();
+    while((entry = getutent()) != NULL){
+        if (entry->ut_type == USER_PROCESS ) {
+            strcpy(user->pUsername, entry->ut_user);
+            timestamp = entry->ut_tv.tv_sec;
+            strcpy(user->pTime, asctime(localtime(&timestamp)));
+        }
+    }
+
     gethostname(user->pHostname, sizeof(user->pHostname));
-
-    struct utmp *bp;
-    char *ct = ctime(&bp->ut_tv.tv_sec);
-    strcpy(user->pTime, ct);
-
+    endutent();
 }
 
 static bool streq(const char * p1, const char * p2 ){

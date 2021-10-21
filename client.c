@@ -46,7 +46,6 @@ int main () {
         removeEnter(consoleBuffer);
         strcpy(outBuffer, consoleBuffer);
 
-        printf("~consoleBuffer>%s~\n", consoleBuffer);
         writeBuffer(s, outBuffer);
 
 
@@ -58,7 +57,7 @@ int main () {
           fflush(stdout);
         }
         else if (streq(inBuffer, MESSAGE_LOGIN_NOK)){
-            printf("Access denied\n");
+            printf("Access Denied.\n");
             fflush(stdout);
             continue;
         }
@@ -68,25 +67,16 @@ int main () {
             continue;
         }
         else if (streq(inBuffer, MESSAGE_QUIT)){
-            printf("Quit\n");
+            printf("Quit.\n");
             exit(0);
         }
-        else if (streq(inBuffer, MESSAGE_NOT_LOGGED_IN)){
-            printf("Please login first.\n");
-            continue;
-        }
         else if (streq(inBuffer, MESSAGE_LOGOUT)){
-            printf("Logged out. You can login again\n");
-            fflush(stdout);
-            continue;
-        }
-        else if (streq(inBuffer, MESSAGE_LOGOUT_NOK)){
-            printf("Cannot log out\n");
+            printf("Logged out.\n");
             fflush(stdout);
             continue;
         }
         else if(streq(inBuffer, MESSAGE_PID_BAD)){
-            printf("Bad pid\n");
+            printf("Bad pid.\n");
             fflush(stdout);
             continue;
         }
@@ -112,8 +102,22 @@ int main () {
             printf("%s\n", consoleBuffer);
             fflush(stdout);
         }
+        else if (streq(inBuffer, MESSAGE_USER_OK)){
+            //Name
+            readBuffer(s, consoleBuffer);
+            printf("Name: %s\n", consoleBuffer);
+            fflush(stdout);
+            //Hostname
+            readBuffer(s, consoleBuffer);
+            printf("Hostname: %s\n", consoleBuffer);
+            fflush(stdout);
+            //Time
+            readBuffer(s, consoleBuffer);
+            printf("Time: %s", consoleBuffer);
+            fflush(stdout);
+        }
         else if(streq(inBuffer, MESSAGE_UNKNOWN_COMMAND)){
-            printf("Unknown command\n");
+            printf("Unknown command.\n");
             fflush(stdout);
             continue;
         }
